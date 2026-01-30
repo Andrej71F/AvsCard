@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -48,6 +49,34 @@ namespace AvsCard.Helpers
         #region Public Methods
 
         /// <summary>
+        /// Extracts the PAN from a Track2 string.
+        /// If the input starts with ';', it will be removed.
+        /// If the input contains '=' or 'D', everything before the separator is returned.
+        /// If the input is already a clean PAN (no separators), it is returned unchanged.
+        /// </summary>
+        /// <param name="track2">Track2 data or a clean PAN.</param>
+        /// <returns>The extracted PAN.</returns>
+        public static string ExtractPan(string track2)
+        {
+            if (string.IsNullOrWhiteSpace(track2))
+                throw new ArgumentException("Track2 or PAN cannot be empty.", nameof(track2));
+
+            // Remove leading ';' if present
+            if (track2.StartsWith(";"))
+                track2 = track2.Substring(1);
+
+            // Find separator '=' or 'D'
+            int idx = track2.IndexOfAny(new[] { '=', 'D' });
+
+            // If separator found → return substring before it
+            if (idx > 0)
+                return track2.Substring(0, idx);
+
+            // No separator → already a clean PAN
+            return track2;
+        }
+
+        /// <summary>
         /// Validates the provided PAN according to AVS rules:
         /// correct length, digit-only content, required prefix,
         /// and successful Luhn checksum.
@@ -61,19 +90,19 @@ namespace AvsCard.Helpers
         public static void ValidatePan(string pan)
         {
             if (string.IsNullOrWhiteSpace(pan))
-                throw new ArgumentException("PAN is required.", nameof(pan));
+                throw new ValidationException("PAN is required." + nameof(pan));
 
             if (pan.Length != AvsConstants.PanLength)
-                throw new ArgumentException($"PAN must be {AvsConstants.PanLength} digits.");
+                throw new ValidationException($"PAN must be {AvsConstants.PanLength} digits.");
 
             if (!pan.All(char.IsDigit))
-                throw new ArgumentException("PAN must contain digits only.");
+                throw new ValidationException("PAN must contain digits only.");
 
             if (!pan.StartsWith(AvsConstants.PanPrefix))
-                throw new ArgumentException($"PAN must start with {AvsConstants.PanPrefix}.");
+                throw new ValidationException($"PAN must start with {AvsConstants.PanPrefix}.");
 
             if (!IsValidLuhn(pan))
-                throw new ArgumentException("PAN failed Luhn check.");
+                throw new ValidationException("PAN failed Luhn check.");
         }
 
         #endregion Public Methods

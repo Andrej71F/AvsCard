@@ -46,7 +46,7 @@ namespace AvsCard.Helpers
                 TerminalId = terminalId,
                 TxId = txId,
                 LocalDateTime = NowString(),
-                Card = new RequestDto.AvsCard { Pan = pan }
+                Card = new RequestDto.AvsCard { Pan = AvsPanValidator.ExtractPan(pan) }
             };
 
         // -----------------------------
@@ -73,7 +73,7 @@ namespace AvsCard.Helpers
                 TerminalId = terminalId,
                 TxId = txId,
                 LocalDateTime = NowString(),
-                Card = new RequestDto.AvsCard { Pan = pan },
+                Card = new RequestDto.AvsCard { Pan = AvsPanValidator.ExtractPan(pan) },
                 Amount = amountCents,
                 Currency = 978
             };
@@ -102,7 +102,7 @@ namespace AvsCard.Helpers
                 TerminalId = terminalId,
                 TxId = txId,
                 LocalDateTime = NowString(),
-                Card = new RequestDto.AvsCard { Pan = pan },
+                Card = new RequestDto.AvsCard { Pan = AvsPanValidator.ExtractPan(pan) },
                 Amount = amountCents,
                 Currency = 978
             };
@@ -133,7 +133,7 @@ namespace AvsCard.Helpers
                 TxId = txId,
                 TxRef = txRef,
                 LocalDateTime = NowString(),
-                Card = new RequestDto.AvsCard { Pan = pan },
+                Card = new RequestDto.AvsCard { Pan = AvsPanValidator.ExtractPan(pan) },
                 Amount = amountCents,
                 Currency = 978
             };

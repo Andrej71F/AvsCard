@@ -34,7 +34,11 @@
                 { AvsResultCode.HttpTimeout, "http timeout" },
                 { AvsResultCode.HttpNetworkError, "http network error" },
                 { AvsResultCode.HttpUnexpectedError, "unexpected http error" },
-                { AvsResultCode.UnknownError, "unknown system error" }
+                { AvsResultCode.UnknownError, "unknown system error" },
+
+                // New validation-related errors
+                { AvsResultCode.DataValidationError, "data validation error" },
+                { AvsResultCode.InvalidRequest, "invalid request" }
             };
 
         #endregion Private Fields

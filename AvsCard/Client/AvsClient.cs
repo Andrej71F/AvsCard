@@ -3,6 +3,7 @@ using AvsCard.RequestDto;
 using AvsCard.ResponseDto;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
@@ -132,24 +133,33 @@ public class AvsClient
     /// </summary>
     public async Task<AvsResponseBase> SendAsync(AvsRequestBase request, CancellationToken ct = default)
     {
-        _logger.LogInformation("Sending AVS request TYPE={Type}, TXID={TxId}", request.Type, request.TxId);
-
-        ValidateRequest(request);
-
-        var xml = SerializeToXml(request);
-        _logger.LogDebug("Serialized AVS request XML:\n{Xml}", xml);
-
-        using var content = new StringContent(
-            xml,
-            Encoding.GetEncoding("ISO-8859-1"),
-            "text/xml"
-        );
-
-        HttpResponseMessage response;
-
         try
         {
-            response = await _httpClient.PostAsync(_endpoint, content, ct);
+            _logger.LogInformation("Sending AVS request TYPE={Type}, TXID={TxId}", request.Type, request.TxId);
+
+            ValidateRequest(request);
+
+            var xml = SerializeToXml(request);
+            _logger.LogDebug("Serialized AVS request XML:\n{Xml}", xml);
+
+            using var content = new StringContent(
+                xml,
+                Encoding.GetEncoding("ISO-8859-1"),
+                "text/xml"
+            );
+
+            var response = await _httpClient.PostAsync(_endpoint, content, ct);
+
+            response.EnsureSuccessStatusCode();
+
+            var responseXml = await response.Content.ReadAsStringAsync(ct);
+            _logger.LogDebug("Received AVS response XML:\n{Xml}", responseXml);
+
+            var parsed = DeserializeResponse(responseXml);
+
+            _logger.LogInformation("AVS response parsed successfully TYPE={Type}, RESULT={Result}", parsed.Type, parsed.Result);
+
+            return parsed;
         }
         catch (TaskCanceledException ex)
         {
@@ -161,45 +171,28 @@ public class AvsClient
             _logger.LogError(ex, "Network error while sending AVS request TXID={TxId}", request.TxId);
             return new AvsHttpCommonErrorResponse((int)AvsResultCode.HttpNetworkError, "Network error while sending request");
         }
+        catch (XmlException ex)
+        {
+            _logger.LogError(ex, "Failed to parse AVS XML response TXID={TxId}", request.TxId);
+            return new AvsHttpCommonErrorResponse((int)AvsResultCode.UnknownError, "Failed to parse AVS XML response");
+        }
+        catch (ValidationException ex)
+        {
+            _logger.LogError(ex, "Invalid AVS request TXID={TxId}", request.TxId);
+            return new AvsHttpCommonErrorResponse((int)AvsResultCode.DataValidationError, ex.Message);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "Validation error in AVS request TXID={TxId}", request.TxId);
+            return new AvsHttpCommonErrorResponse(
+                (int)AvsResultCode.InvalidRequest,
+                ex.Message
+            );
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error while sending AVS request TXID={TxId}", request.TxId);
             return new AvsHttpCommonErrorResponse((int)AvsResultCode.HttpUnexpectedError, "Unexpected error while sending request");
-        }
-
-        try
-        {
-            response.EnsureSuccessStatusCode();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "HTTP status code error: {StatusCode} for TXID={TxId}", response.StatusCode, request.TxId);
-            return new AvsHttpCommonErrorResponse((int)AvsResultCode.HttpNetworkError, $"HTTP status code error: {response.StatusCode}");
-        }
-
-        string responseXml;
-
-        try
-        {
-            responseXml = await response.Content.ReadAsStringAsync(ct);
-            _logger.LogDebug("Received AVS response XML:\n{Xml}", responseXml);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to read AVS HTTP response content TXID={TxId}", request.TxId);
-            return new AvsHttpCommonErrorResponse((int)AvsResultCode.HttpUnexpectedError, "Failed to read HTTP response content");
-        }
-
-        try
-        {
-            var parsed = DeserializeResponse(responseXml);
-            _logger.LogInformation("AVS response parsed successfully TYPE={Type}, RESULT={Result}", parsed.Type, parsed.Result);
-            return parsed;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to parse AVS XML response TXID={TxId}", request.TxId);
-            return new AvsHttpCommonErrorResponse((int)AvsResultCode.UnknownError, "Failed to parse AVS XML response");
         }
     }
 

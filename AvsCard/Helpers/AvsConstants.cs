@@ -61,6 +61,10 @@ namespace AvsCard.Helpers
 
         HttpUnexpectedError = 100002,
 
+        DataValidationError = 100003,
+
+        InvalidRequest = 100004,
+
         UnknownError = 999999
     }
 
