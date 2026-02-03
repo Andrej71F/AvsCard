@@ -2,6 +2,9 @@
 using AvsCard.Helpers;
 using AvsCard.RequestDto;
 using AvsCard.ResponseDto;
+using AvsCard.Wpf.Test.Logging;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Prism.Commands;
 using Prism.Mvvm;
 using System;
@@ -13,19 +16,25 @@ using System.Windows.Input;
 
 namespace AvsCard.Wpf.Test.ViewModels
 {
+    /// <summary>
+    /// ViewModel for the AVS test client.
+    /// Handles configuration loading, AVS operations, UI state, and logging.
+    /// </summary>
     public class AvsClientTestViewModel : BindableBase
     {
         #region Private Fields
 
+        private readonly ILogger<AvsClientTestViewModel> _logger;
+
         private string _endpoint = AvsConstants.TestUrl;
 
-        private string _username = "avs_test";
+        private string _username = "test";
 
-        private string _password = "test";
+        private string _password = "";
 
-        private string _terminalId = "avs_test";
+        private string _terminalId = "test";
 
-        private string _pan = AvsConstants.PanPrefix + "9999999990";
+        private string _pan = "636453";
 
         private string _txId = $"TEST_{DateTime.Now:yyyyMMddHHmmssfff}";
 
@@ -45,10 +54,16 @@ namespace AvsCard.Wpf.Test.ViewModels
 
         #region Private Methods
 
+        /// <summary>
+        /// Executes an AVS transaction asynchronously and updates UI state.
+        /// </summary>
         private async Task ExecuteAsync(AvsTransactionType type)
         {
+            _logger.LogInformation("Executing AVS operation: {Operation}", type);
+
             if (!Validate(type, out var err))
             {
+                _logger.LogWarning("Validation failed for {Operation}: {Error}", type, err);
                 Append($"[VALIDATION ERROR] {err}\n");
                 return;
             }
@@ -61,22 +76,20 @@ namespace AvsCard.Wpf.Test.ViewModels
                 if (UseOverlay)
                     IsBusyOverlay = true;
 
-                var client = new AvsClient(new HttpClient(), Endpoint);
+                _logger.LogDebug("Creating AVS client for endpoint {Endpoint}", Endpoint);
+                var client = new AvsClient(new HttpClient(), Endpoint, _logger);
 
-                AvsRequestBase req = type switch
-                {
-                    AvsTransactionType.BALANCE => AvsRequestFactory.CreateBalance(Username, Password, TerminalId, TxId, Pan),
-                    AvsTransactionType.REDEEM => AvsRequestFactory.CreateRedeem(Username, Password, TerminalId, TxId, Pan, AmountCents),
-                    AvsTransactionType.REFUND => AvsRequestFactory.CreateRefund(Username, Password, TerminalId, TxId, Pan, AmountCents),
-                    AvsTransactionType.CANCEL => AvsRequestFactory.CreateCancel(Username, Password, TerminalId, TxId, TxRef, Pan, AmountCents),
-                    _ => throw new ArgumentOutOfRangeException()
-                };
+                var req = CreateRequest(type);
+                _logger.LogInformation("Sending AVS request: {Type}, TxId={TxId}, Pan={Pan}", type, TxId, Pan);
 
-                var resp = client.Send(req);
+                var resp = await Task.Run(() => client.Send(req));
+
+                _logger.LogInformation("Received AVS response: {Type}, Result={Result}", resp.Type, resp.Result);
                 AppendResponse(resp);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Exception during AVS operation {Operation}", type);
                 Append($"[EXCEPTION] {ex.Message}\n");
             }
             finally
@@ -86,9 +99,29 @@ namespace AvsCard.Wpf.Test.ViewModels
 
                 if (UseModalDialog)
                     HideWaitRequested?.Invoke(this, EventArgs.Empty);
+
+                _logger.LogInformation("Finished AVS operation: {Operation}", type);
             }
         }
 
+        /// <summary>
+        /// Creates an AVS request object based on the transaction type.
+        /// </summary>
+        private AvsRequestBase CreateRequest(AvsTransactionType type)
+        {
+            return type switch
+            {
+                AvsTransactionType.BALANCE => AvsRequestFactory.CreateBalance(Username, Password, TerminalId, TxId, Pan),
+                AvsTransactionType.REDEEM => AvsRequestFactory.CreateRedeem(Username, Password, TerminalId, TxId, Pan, AmountCents),
+                AvsTransactionType.REFUND => AvsRequestFactory.CreateRefund(Username, Password, TerminalId, TxId, Pan, AmountCents),
+                AvsTransactionType.CANCEL => AvsRequestFactory.CreateCancel(Username, Password, TerminalId, TxId, TxRef, Pan, AmountCents),
+                _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+            };
+        }
+
+        /// <summary>
+        /// Validates user input before sending a request.
+        /// </summary>
         private bool Validate(AvsTransactionType type, out string error)
         {
             if (string.IsNullOrWhiteSpace(Endpoint)) { error = "Endpoint required"; return false; }
@@ -114,6 +147,9 @@ namespace AvsCard.Wpf.Test.ViewModels
             return true;
         }
 
+        /// <summary>
+        /// Appends a line of text to the output RichTextBox.
+        /// </summary>
         private void Append(string text)
         {
             if (_output == null) return;
@@ -121,10 +157,11 @@ namespace AvsCard.Wpf.Test.ViewModels
             _output.ScrollToEnd();
         }
 
+        /// <summary>
+        /// Appends a formatted AVS response to the output.
+        /// </summary>
         private void AppendResponse(AvsResponseBase r)
         {
-            if (_output == null) return;
-
             Append($"=== RESPONSE ({r.Type}) ===");
             Append($"RESULT: {r.Result}");
             Append($"RESULTTEXT: {r.ResultText}");
@@ -154,6 +191,9 @@ namespace AvsCard.Wpf.Test.ViewModels
             Append("");
         }
 
+        /// <summary>
+        /// Appends balance information to the output.
+        /// </summary>
         private void AppendBalance(AvsBalanceInfo? info)
         {
             if (info == null) return;
@@ -168,12 +208,60 @@ namespace AvsCard.Wpf.Test.ViewModels
             Append("");
         }
 
+        /// <summary>
+        /// Loads configuration values from appsettings.test.json.
+        /// </summary>
+        private void LoadConfiguration()
+        {
+            try
+            {
+                var builder = new ConfigurationBuilder()
+                    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                    .AddJsonFile("appsettings.test.json", optional: true, reloadOnChange: false);
+
+                var config = builder.Build();
+                var avs = config.GetSection("Avs");
+
+                if (!avs.Exists())
+                {
+                    _logger.LogWarning("AVS configuration section not found in appsettings.test.json");
+                    return;
+                }
+
+                Endpoint = avs["Endpoint"] ?? Endpoint;
+                Username = avs["Username"] ?? Username;
+                Password = avs["Password"] ?? Password;
+                TerminalId = avs["TerminalId"] ?? TerminalId;
+
+                var testPan = avs["TestPan"];
+                if (!string.IsNullOrWhiteSpace(testPan))
+                    Pan = testPan;
+
+                _logger.LogInformation("AVS configuration loaded successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load configuration");
+                Append($"[CONFIG ERROR] {ex.Message}\n");
+            }
+        }
+
         #endregion Private Methods
 
         #region Public Constructors
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AvsClientTestViewModel"/> class.
+        /// Loads configuration, initializes logging, and sets up commands.
+        /// </summary>
         public AvsClientTestViewModel()
         {
+            var factory = LoggerFactoryBuilder.Create();
+            _logger = factory.CreateLogger<AvsClientTestViewModel>();
+
+            LoadConfiguration();
+            _logger.LogInformation("Configuration loaded. Endpoint={Endpoint}, Username={Username}, TerminalId={TerminalId}", Endpoint, Username, TerminalId);
+
             BalanceCommand = new DelegateCommand(async () => await ExecuteAsync(AvsTransactionType.BALANCE));
             RedeemCommand = new DelegateCommand(async () => await ExecuteAsync(AvsTransactionType.REDEEM));
             RefundCommand = new DelegateCommand(async () => await ExecuteAsync(AvsTransactionType.REFUND));
@@ -181,15 +269,24 @@ namespace AvsCard.Wpf.Test.ViewModels
 
             ClearOutputCommand = new DelegateCommand(() => _output?.Document.Blocks.Clear());
             GenerateTxIdCommand = new DelegateCommand(() =>
-                TxId = $"TEST_{DateTime.Now:yyyyMMddHHmmssfff}");
+            {
+                TxId = $"TEST_{DateTime.Now:yyyyMMddHHmmssfff}";
+                _logger.LogDebug("Generated new TxId: {TxId}", TxId);
+            });
         }
 
         #endregion Public Constructors
 
         #region Public Events
 
+        /// <summary>
+        /// Occurs when the UI should display a modal wait window.
+        /// </summary>
         public event EventHandler? ShowWaitRequested;
 
+        /// <summary>
+        /// Occurs when the UI should hide the modal wait window.
+        /// </summary>
         public event EventHandler? HideWaitRequested;
 
         #endregion Public Events
@@ -197,29 +294,46 @@ namespace AvsCard.Wpf.Test.ViewModels
         #region Public Properties
 
         public string Endpoint { get => _endpoint; set => SetProperty(ref _endpoint, value); }
+
         public string Username { get => _username; set => SetProperty(ref _username, value); }
+
         public string Password { get => _password; set => SetProperty(ref _password, value); }
+
         public string TerminalId { get => _terminalId; set => SetProperty(ref _terminalId, value); }
+
         public string Pan { get => _pan; set => SetProperty(ref _pan, value); }
+
         public string TxId { get => _txId; set => SetProperty(ref _txId, value); }
+
         public string TxRef { get => _txRef; set => SetProperty(ref _txRef, value); }
+
         public int AmountCents { get => _amountCents; set => SetProperty(ref _amountCents, value); }
 
         public bool UseModalDialog { get => _useModalDialog; set => SetProperty(ref _useModalDialog, value); }
+
         public bool UseOverlay { get => _useOverlay; set => SetProperty(ref _useOverlay, value); }
+
         public bool IsBusyOverlay { get => _isBusyOverlay; set => SetProperty(ref _isBusyOverlay, value); }
 
         public ICommand BalanceCommand { get; }
+
         public ICommand RedeemCommand { get; }
+
         public ICommand RefundCommand { get; }
+
         public ICommand CancelCommand { get; }
+
         public ICommand ClearOutputCommand { get; }
+
         public ICommand GenerateTxIdCommand { get; }
 
         #endregion Public Properties
 
         #region Public Methods
 
+        /// <summary>
+        /// Attaches a RichTextBox instance for output logging.
+        /// </summary>
         public void AttachRichTextBox(RichTextBox rtb) => _output = rtb;
 
         #endregion Public Methods

@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:test="clr-namespace:AvsCard.Wpf.Test"
              xmlns:vm="clr-namespace:AvsCard.Wpf.Test.ViewModels"
+             Width="1000" Height="600"
              mc:Ignorable="d">
 
     <UserControl.Resources>
@@ -43,7 +44,8 @@
                     <TextBox Text="{Binding Username}" />
 
                     <TextBlock Text="Password:" Margin="0,5,0,0" />
-                    <PasswordBox PasswordChanged="PasswordBox_OnPasswordChanged" />
+                    <!--<PasswordBox PasswordChanged="PasswordBox_OnPasswordChanged" />-->
+                    <PasswordBox test:PasswordBoxHelper.BoundPassword="{Binding Password, Mode=TwoWay}" />
                 </StackPanel>
             </GroupBox>
 
