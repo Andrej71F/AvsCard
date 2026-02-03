@@ -5,7 +5,6 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:test="clr-namespace:AvsCard.Wpf.Test"
              xmlns:vm="clr-namespace:AvsCard.Wpf.Test.ViewModels"
-             Width="1000" Height="600"
              mc:Ignorable="d">
 
     <UserControl.Resources>
