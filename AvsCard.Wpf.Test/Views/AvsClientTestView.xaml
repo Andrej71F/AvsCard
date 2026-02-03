@@ -1,0 +1,115 @@
+﻿<UserControl x:Class="AvsCard.Wpf.Test.Views.AvsClientTestView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:test="clr-namespace:AvsCard.Wpf.Test"
+             xmlns:vm="clr-namespace:AvsCard.Wpf.Test.ViewModels"
+             mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <test:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </UserControl.Resources>
+    <UserControl.DataContext>
+        <vm:AvsClientTestViewModel />
+    </UserControl.DataContext>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*" />
+            <ColumnDefinition Width="3*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="10">
+            <TextBlock Text="AVS Card Test Client" FontSize="18" FontWeight="Bold" Margin="0,0,20,0" />
+            <CheckBox Content="Use Modal Dialog (B)" IsChecked="{Binding UseModalDialog}" Margin="0,0,10,0" />
+            <CheckBox Content="Use Overlay (C)" IsChecked="{Binding UseOverlay}" />
+        </StackPanel>
+
+        <!-- LEFT PANEL -->
+        <StackPanel Grid.Row="1" Grid.Column="0" Margin="10">
+
+            <GroupBox Header="Connection" Margin="0,0,0,10">
+                <StackPanel Margin="5">
+                    <TextBlock Text="Endpoint:" />
+                    <TextBox Text="{Binding Endpoint}" />
+
+                    <TextBlock Text="Username:" Margin="0,5,0,0" />
+                    <TextBox Text="{Binding Username}" />
+
+                    <TextBlock Text="Password:" Margin="0,5,0,0" />
+                    <PasswordBox PasswordChanged="PasswordBox_OnPasswordChanged" />
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Transaction" Margin="0,0,0,10">
+                <StackPanel Margin="5">
+                    <TextBlock Text="Terminal ID:" />
+                    <TextBox Text="{Binding TerminalId}" />
+
+                    <TextBlock Text="PAN:" Margin="0,5,0,0" />
+                    <TextBox Text="{Binding Pan}" />
+
+                    <TextBlock Text="TXID:" Margin="0,5,0,0" />
+                    <DockPanel>
+                        <TextBox Text="{Binding TxId}" Width="200" />
+                        <Button Content="Generate" Command="{Binding GenerateTxIdCommand}" Margin="5,0,0,0" />
+                    </DockPanel>
+
+                    <TextBlock Text="TXREF (Cancel):" Margin="0,5,0,0" />
+                    <TextBox Text="{Binding TxRef}" />
+
+                    <TextBlock Text="Amount (cents):" Margin="0,5,0,0" />
+                    <TextBox Text="{Binding AmountCents}" />
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Operations">
+                <UniformGrid Columns="2" Margin="5">
+                    <Button Content="BALANCE" Command="{Binding BalanceCommand}" Margin="2" />
+                    <Button Content="REDEEM" Command="{Binding RedeemCommand}" Margin="2" />
+                    <Button Content="REFUND" Command="{Binding RefundCommand}" Margin="2" />
+                    <Button Content="CANCEL" Command="{Binding CancelCommand}" Margin="2" />
+                </UniformGrid>
+            </GroupBox>
+        </StackPanel>
+
+        <!-- RIGHT PANEL -->
+        <Grid Grid.Row="1" Grid.Column="1" Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Orientation="Horizontal" Grid.Row="0">
+                <TextBlock Text="Response log" FontWeight="Bold" />
+                <Button Content="Clear" Command="{Binding ClearOutputCommand}" Margin="10,0,0,0" />
+            </StackPanel>
+
+            <RichTextBox Grid.Row="1"
+                         IsReadOnly="True"
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Auto"
+                         x:Name="OutputRichTextBox"
+                         Loaded="OutputRichTextBox_OnLoaded" />
+        </Grid>
+
+        <!-- OVERLAY (Variant C) -->
+        <Grid Background="#80000000"
+              Visibility="{Binding IsBusyOverlay, Converter={StaticResource BooleanToVisibilityConverter}}"
+              Grid.RowSpan="2" Grid.ColumnSpan="2">
+            <Border Background="#333" CornerRadius="8" Padding="20"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="Please wait..." Foreground="White" FontSize="16" Margin="0,0,0,10" />
+                    <ProgressBar IsIndeterminate="True" Width="200" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

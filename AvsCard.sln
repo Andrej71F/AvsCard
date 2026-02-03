@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36908.2 d17.14
+VisualStudioVersion = 17.14.36908.2
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvsCard", "AvsCard\AvsCard.csproj", "{86E54821-CCF3-4CDC-B318-15F8244BA137}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvsCardTests", "AvsCardTests\AvsCardTests.csproj", "{EE29728A-35F4-47D6-9AD8-95AD7E119D29}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvsCard.Wpf.Test", "AvsCard.Wpf.Test\AvsCard.Wpf.Test.csproj", "{9F585480-089D-461E-B23F-C1BC23DAED2A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{EE29728A-35F4-47D6-9AD8-95AD7E119D29}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EE29728A-35F4-47D6-9AD8-95AD7E119D29}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EE29728A-35F4-47D6-9AD8-95AD7E119D29}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F585480-089D-461E-B23F-C1BC23DAED2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F585480-089D-461E-B23F-C1BC23DAED2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F585480-089D-461E-B23F-C1BC23DAED2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F585480-089D-461E-B23F-C1BC23DAED2A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
